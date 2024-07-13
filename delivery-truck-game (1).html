@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Défi de Collecte TRUCK</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameContainer {
+            text-align: center;
+            position: relative;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+        }
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .control-btn {
+            background-color: #ffcc00;
+            border: none;
+            padding: 15px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+        .btn {
+            background-color: #ffcc00;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>Défi de Collecte TRUCK</h1>
+        <canvas id="gameCanvas" width="300" height="300"></canvas>
+        <p>Score : <span id="score">0</span> | Temps : <span id="timer">60</span>s</p>
+        <div id="controls">
+            <button class="control-btn" id="leftBtn">←</button>
+            <button class="control-btn" id="upBtn">↑</button>
+            <button class="control-btn" id="downBtn">↓</button>
+            <button class="control-btn" id="rightBtn">→</button>
+        </div>
+        <div id="startScreen" class="overlay">
+            <p>TRUCK Collection Challenge!</p>
+            <p>Ta mission : Collecter autant de colis que possible en 60 secondes.</p>
+            <button id="startBtn" class="btn">Commencer</button>
+        </div>
+        <div id="gameOverScreen" class="overlay" style="display: none;">
+            <p>Game Over</p>
+            <p>Votre score final : <span id="finalScore"></span> colis collectés</p>
+            <button id="restartBtn" class="btn">Recommencer</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreElement = document.getElementById('finalScore');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let truck = { x: 150, y: 150, dx: 5, dy: 0, size: 20 };
+        let package = { x: 0, y: 0 };
+        let score = 0;
+        let timeLeft = 60;
+        let gameInterval;
+        let isGameRunning = false;
+
+        function drawTruck() {
+            ctx.fillStyle = '#ffcc00';
+            ctx.fillRect(truck.x, truck.y, truck.size, truck.size);
+            
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(truck.x, truck.y + truck.size, truck.size/5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(truck.x + truck.size, truck.y + truck.size, truck.size/5, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = '#cc0000';
+            ctx.font = `${truck.size/4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('TRUCK', truck.x + truck.size/2, truck.y + truck.size/2);
+        }
+
+        function drawPackage() {
+            ctx.fillStyle = '#cc0000';
+            ctx.fillRect(package.x, package.y, 10, 10);
+        }
+
+        function movePackage() {
+            package.x = Math.floor(Math.random() * (canvas.width - 10));
+            package.y = Math.floor(Math.random() * (canvas.height - 10));
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            truck.x += truck.dx;
+            truck.y += truck.dy;
+
+            if (truck.x < 0) truck.x = canvas.width - truck.size;
+            if (truck.x > canvas.width - truck.size) truck.x = 0;
+            if (truck.y < 0) truck.y = canvas.height - truck.size;
+            if (truck.y > canvas.height - truck.size) truck.y = 0;
+
+            if (truck.x < package.x + 10 &&
+                truck.x + truck.size > package.x &&
+                truck.y < package.y + 10 &&
+                truck.y + truck.size > package.y) {
+                score++;
+                scoreElement.textContent = score;
+                movePackage();
+                truck.size += 2;
+                truck.size = Math.min(truck.size, 40);
+            }
+
+            drawTruck();
+            drawPackage();
+        }
+
+        function startGame() {
+            if (isGameRunning) return;
+            isGameRunning = true;
+            truck = { x: 150, y: 150, dx: 5, dy: 0, size: 20 };
+            score = 0;
+            timeLeft = 60;
+            scoreElement.textContent = score;
+            timerElement.textContent = timeLeft;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            movePackage();
+            gameInterval = setInterval(updateGame, 50);
+            startTimer();
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(gameInterval);
+            finalScoreElement.textContent = score;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function moveControl(dx, dy) {
+            truck.dx = dx;
+            truck.dy = dy;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning) return;
+            switch(e.key) {
+                case 'ArrowLeft': moveControl(-5, 0); break;
+                case 'ArrowRight': moveControl(5, 0); break;
+                case 'ArrowUp': moveControl(0, -5); break;
+                case 'ArrowDown': moveControl(0, 5); break;
+            }
+        });
+
+        document.getElementById('leftBtn').addEventListener('click', () => moveControl(-5, 0));
+        document.getElementById('rightBtn').addEventListener('click', () => moveControl(5, 0));
+        document.getElementById('upBtn').addEventListener('click', () => moveControl(0, -5));
+        document.getElementById('downBtn').addEventListener('click', () => moveControl(0, 5));
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
